@@ -1,0 +1,34 @@
+plugins {
+    id 'application'
+}
+
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+repositories {
+    mavenCentral()
+    maven { url "http://jars.interlis.ch"; allowInsecureProtocol true }
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
+    
+    implementation 'org.slf4j:slf4j-api:1.7.32'
+    implementation 'org.slf4j:slf4j-simple:1.7.32'
+    
+    //implementation 'ch.interlis:ili2gpkg:4.4.5'
+    implementation 'org.orbisgis:h2gis:1.5.0'
+    implementation 'ch.interlis:ili2h2gis:4.6.0'
+    //implementation 'org.xerial:sqlite-jdbc:3.36.0.3' // Apple M1
+    implementation 'ch.ehi:ehibasics:1.4.0' // Warum brauche ich das hier?
+    
+    implementation 'net.lingala.zip4j:zip4j:2.6.4'
+}
+
+application {
+    mainClass = 'ch.so.agi.dmflex.App'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
