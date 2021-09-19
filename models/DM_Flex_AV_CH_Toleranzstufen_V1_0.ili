@@ -1,0 +1,74 @@
+INTERLIS 2.4;
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!
+!! DM.flex Datenmodell der amtlichen Vermessung "Bund" (DM.flex-AV-CH)
+!! beschrieben in INTERLIS Version 2.4
+!!
+!! Bundesamt fuer Landestopographie (swisstopo)
+!! Fachstelle Eidgenoessische Vermessungsdirektion (V+D)
+!! CH-3084 Wabern
+!! www.cadastre.ch und www.interlis.ch
+!!
+!! Version: 1 deutsch
+!! Dateiname: DM.flex-AV-CH.ili
+!!
+!! Das vorliegende Datenmodell gilt fuer den Bezugsrahmen "Landesvermessung 1903+
+!! (LV95)".
+!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!@ technicalContact = mailto:vermessung@swisstopo.ch
+!!@ furtherInformation = https://www.cadastre.ch/de/manual-av/method/dm-flex.html
+MODEL DM_Flex_AV_CH_Toleranzstufen_V1_0 (de)
+  AT "https://models.geo.admin.ch/V_D/" VERSION "2021-09-06" =
+  IMPORTS GeometryCHLV95_V2;
+  IMPORTS DM_Flex_AV_CH_Modinfo_V1_0;
+
+  TOPIC Toleranzstufen =
+    BASKET OID AS INTERLIS.UUIDOID;
+    OID AS INTERLIS.UUIDOID;
+    
+    CLASS TSNachfuehrung =
+      NBIdent: MANDATORY TEXT*12;
+      Identifikator: MANDATORY TEXT*12;  !! z.B. Nummer des technischen Dossiers
+      Beschreibung: MANDATORY TEXT*30;
+      Perimeter:  SURFACE WITH (STRAIGHTS, ARCS) VERTEX GeometryCHLV95_V2.Coord2
+        WITHOUT OVERLAPS > 0.002;
+      Status: MANDATORY DM_Flex_AV_CH_Modinfo_V1_0.Status;
+      GueltigerEintrag:  MANDATORY INTERLIS.XMLDateTime;
+      UNIQUE NBIdent, Identifikator;
+    END TSNachfuehrung;
+
+    CLASS Toleranzstufe =
+      UntergegangenAm:  INTERLIS.XMLDateTime;
+      NBIdent: MANDATORY TEXT*12;
+      Identifikator: MANDATORY TEXT*12;  !! z.B. Nummer des technischen Dossiers
+      Geometrie: MANDATORY SURFACE WITH (STRAIGHTS, ARCS) VERTEX GeometryCHLV95_V2.Coord2
+        WITHOUT OVERLAPS > 0.002;
+      Toleranzstufe: MANDATORY (
+        TS1,
+        TS2,
+        TS3,
+        TS4,
+        TS5);
+      Fiktiv : MANDATORY BOOLEAN;
+    END Toleranzstufe;
+
+    VIEW Toleranzstufe_Gueltig
+     	PROJECTION OF TS~Toleranzstufe;
+    	WHERE NOT( DEFINED(TS->UntergegangenAm));
+    	=
+    	ALL OF TS;
+    SET CONSTRAINT INTERLIS.areAreas(ALL, UNDEFINED, >> Geometrie);
+    UNIQUE NBIdent, Identifikator;
+    END Toleranzstufe_Gueltig;
+
+    ASSOCIATION Entstehung_Toleranzstufe =
+      Entstehung -- {1} TSNachfuehrung;
+      entstehende_Toleranzstufe -- {0..*} Toleranzstufe;
+    END Entstehung_Toleranzstufe;
+    
+  END Toleranzstufen;
+ 
+END DM_Flex_AV_CH_Toleranzstufen_V1_0.

@@ -1,0 +1,209 @@
+INTERLIS 2.4;
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!
+!! DM.flex Datenmodell der amtlichen Vermessung "Bund" (DM.flex-AV-CH)
+!! beschrieben in INTERLIS Version 2.4
+!!
+!! Bundesamt fuer Landestopographie (swisstopo)
+!! Fachstelle Eidgenoessische Vermessungsdirektion (V+D)
+!! CH-3084 Wabern
+!! www.cadastre.ch und www.interlis.ch
+!!
+!! Version: 1 deutsch
+!! Dateiname: DM.flex-AV-CH.ili
+!!
+!! Das vorliegende Datenmodell gilt fuer den Bezugsrahmen "Landesvermessung 1903+
+!! (LV95)".
+!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!@ technicalContact = mailto:vermessung@swisstopo.ch
+!!@ furtherInformation = https://www.cadastre.ch/de/manual-av/method/dm-flex.html
+MODEL DM_Flex_AV_CH_Gebaeudeadressen_V1_0 (de)
+  AT "https://models.geo.admin.ch/V_D/" VERSION "2021-09-06" =
+  IMPORTS GeometryCHLV95_V2;
+  IMPORTS DM_Flex_AV_CH_Modinfo_V1_0;
+
+  TOPIC Gebaeudeadressen =  !! siehe SN 612040;
+                          !! Verantwortung der Gemeinden
+    BASKET OID AS INTERLIS.UUIDOID;
+    OID AS INTERLIS.UUIDOID;
+ 
+  !! Geometrische Beziehung zwischen Gebaeudeeingang und PLZ
+  !! Geometrische Beziehung zwischen Gebaeudeeingang und Ortschaft
+  !! Geometrische Beziehung zwischen Lokalisation und OrtschaftsVerbund
+  
+  DOMAIN
+  
+      Sprachtyp = ( !! Fuer Gebaeudeadressen, siehe SN 612040
+          de,  !! deutsch
+          fr,  !! francais
+          it,  !! italiano
+          rm);  !! rumantsch
+  
+    CLASS GEBNachfuehrung  = !! SN Norm = NachfuerbareSache
+      NBIdent: MANDATORY TEXT*12;
+                         !! DM.Flex: zusaetzlich zur SN
+      Identifikator: MANDATORY TEXT*12;  !! z.B. Nummer des technischen Dossiers
+                               !! DM.Flex: zusaetzlich zur SN
+      Beschreibung: MANDATORY TEXT*30;
+      Perimeter:  SURFACE WITH (STRAIGHTS, ARCS) VERTEX GeometryCHLV95_V2.Coord2
+        WITHOUT OVERLAPS > 0.002; !! DM.Flex: zusaetzlich zur SN
+      Status: MANDATORY DM_Flex_AV_CH_Modinfo_V1_0.Status;
+      GueltigerEintrag: INTERLIS.XMLDateTime;
+    UNIQUE NBIdent, Identifikator;
+    END GEBNachfuehrung;
+    
+    !! Beispiel fuer Text, KurzText und IndexText:
+    !! Name (Vollstaendiger Name): Conrad-Ferdinand-Meyer-Strasse
+    !! NameKurz (Schreibweise in der Postadresse): CF Meyer Str
+    !! NameAlsIndex (Fuer Index): Meyer CF Str
+    STRUCTURE LokalisationName =
+      Name: MANDATORY TEXT*60; 
+      NameKurz:  TEXT*24; 
+      NameAlsIndex:  TEXT*16;
+      Sprache: MANDATORY Sprachtyp; 
+    END LokalisationName; 
+    
+    STRUCTURE BenanntesGebiet =        
+      Geometrie: MANDATORY SURFACE WITH (STRAIGHTS, ARCS) VERTEX GeometryCHLV95_V2.Coord2
+        WITHOUT OVERLAPS > 0.002; 
+    END BenanntesGebiet;
+    
+    !! Die Geometrie entspricht der Strassenachse,
+    !! siehe die Erklaerungen, Kapitel 3.18.2
+    !! Hauptstrassenabschnitt. Die privaten Zugangsabschnitte 
+    !! werden nicht im Bundesmodell erfasst 
+    STRUCTURE Strassenstueck =
+      Geometrie: MANDATORY GeometryCHLV95_V2.DirectedLine;
+      IstAchse: MANDATORY (ja, nein);
+    END Strassenstueck;
+
+    CLASS Lokalisation =
+      LokalisationNummer:  TEXT*12;
+      AttributeProvisorisch: MANDATORY (ja, nein);
+      IstOffizielleBezeichnung: MANDATORY (ja, nein);
+      Lokalisationsstatus: MANDATORY (projektiert, real, vergangen);
+      InAenderung: MANDATORY (ja, nein);
+      Lokalisationsart: MANDATORY (
+          BenanntesGebiet,
+          Strasse,
+          Platz);
+      !! Eidgenössischer Strassenidentifikator
+      GWR_ESID:  10000000 .. 90000000;
+      LokalisationName: BAG {1..*} OF LokalisationName;
+      BenanntesGebiet: BAG {0..*} OF BenanntesGebiet;
+      Strassenstueck: LIST {0..*} OF Strassenstueck;
+    MANDATORY CONSTRAINT
+      (INTERLIS.elementCount(Strassenstueck)>0) == (Lokalisationsart==#Strasse OR Lokalisationsart==#Platz);
+    MANDATORY CONSTRAINT
+      (INTERLIS.elementCount(BenanntesGebiet)>0) == (Lokalisationsart==#BenanntesGebiet);
+    UNIQUE (LOCAL) LokalisationName:Sprache;
+    END Lokalisation;
+
+    ASSOCIATION Entstehung_Lokalisation =
+        Entstehung -- {1} GEBNachfuehrung;
+        entstehende_Lokalisation -- {0..*} Lokalisation;
+    END Entstehung_Lokalisation;
+
+    ASSOCIATION Untergang_Lokalisation =
+        Untergang -- {0..1} GEBNachfuehrung;
+        untergehende_Lokalisation -- {0..*} Lokalisation;
+    END Untergang_Lokalisation;
+
+    ASSOCIATION Vorgaenger_Nachfolger_Lokalisation =
+        Vorgaenger -- {0..1} Lokalisation;
+        Nachfolger -- {0..*} Lokalisation;
+    END Vorgaenger_Nachfolger_Lokalisation;
+    
+    VIEW Lokalisation_Gueltig
+     	PROJECTION OF Lokalisation;
+    	WHERE DEFINED(Lokalisation->Entstehung) AND Lokalisation->Entstehung->Status==#gueltig AND (NOT(DEFINED(Lokalisation->Untergang)) OR Lokalisation->Untergang->Status<>#gueltig);
+    	=
+    	ALL OF Lokalisation;
+    END Lokalisation_Gueltig;
+    
+    STRUCTURE GebaeudeName =
+      Name: MANDATORY TEXT*40;
+      NameKurz:  TEXT*24;
+      NameAlsIndex:  TEXT*16;
+      Sprache: MANDATORY Sprachtyp; 
+    END GebaeudeName;
+    
+    STRUCTURE GebaeudeBeschreibung =
+      Beschreibung: MANDATORY TEXT*100;
+      Sprache: MANDATORY Sprachtyp; 
+    END GebaeudeBeschreibung;
+    
+    !! Auch fuer projektierte Gebaeude
+    CLASS Gebaeudeeingang =
+      Gebaeudestatus: MANDATORY DM_Flex_AV_CH_Modinfo_V1_0.Status;
+      InAenderung: MANDATORY (ja, nein);
+      AttributeProvisorisch: MANDATORY (ja, nein);
+      IstOffizielleGebaeudeadresse: MANDATORY (ja, nein);
+      Geometrie: MANDATORY GeometryCHLV95_V2.Coord2; 
+      !! // Lage innerhalb BB.Gebaeude, EO-Elemente (unterirdisches_Gebaeude usw.) //
+        !! HoehenLage ist nuetzlich wenn mehrere Eingaenge auf mehreren Niveaux
+        !! Ungefaehre Hoehe ueber gewachsenem Terrain
+      HoeheUeberGrund:  -99 .. 99 [INTERLIS.m]; !! [m]
+        !! Die Hausnummer besteht aus einer Nummer,
+        !! welche mit einem Zusatz (Buchstaben a,b,c)
+        !! ergaenzt werden kann. Zwischen Nummer und Zusatz
+        !! keine Leerschlaege oder Trennzeichen.
+        !! Wenn die Hausnummer definiert ist, dann muss fuer Lokalisation und
+        !! Gebaeudeeingang gelten:
+        !! - Lokalisation und Hausnummer muessen fuer Status = real
+        !!   zusammen eindeutig sein;
+        !! - Nummerierungsprinzip darf nicht den Wert keines haben.
+      Hausnummer:  TEXT*12;  !! z.B. Polizeinummer
+        !! Im_Gebaeude ist nuetzlich, um zu definieren, ob die Nummer mit einem
+        !! Objekt der BB oder mit einem Objekt der EO verknuepft ist.
+      ImModul: MANDATORY (Bodenbedeckung, Einzelobjekte); !! DM.Flex: zusaetzlich zur SN
+        !! Eidg. Gebaeude-Identifikator wenn verfuegbar,
+        !! siehe Erklaerung Kapitel 3.18.2
+      GWR_EGID:  1..900000000;
+        !! Eidg. Eingang-Identifikator wenn verfuegbar,
+        !! siehe Erklaerung Kapitel 3.18.2
+      GWR_EDID:  0..90; !! DM.Flex: zusaetzlich zur SN
+      !! Eidgenössischer Gebäudeadressidentifikator
+      GWR_EGAID:  100000000 .. 900000000;
+      GebaeudeName: BAG {0..*} OF GebaeudeName;
+      GebaeudeBeschreibung: BAG {0..*} OF GebaeudeBeschreibung;
+      UNIQUE (LOCAL) GebaeudeName:Sprache;
+      UNIQUE (LOCAL) GebaeudeBeschreibung:Sprache;
+    END Gebaeudeeingang;
+
+    ASSOCIATION Entstehung_Gebaeudeeingang =
+        Entstehung -- {1} GEBNachfuehrung;
+        entstehender_Gebaeudeeingang -- {0..*} Gebaeudeeingang;
+    END Entstehung_Gebaeudeeingang;
+
+    ASSOCIATION Untergang_Gebaeudeeingang =
+        Untergang -- {0..1} GEBNachfuehrung;
+        untergehender_Gebaeudeeingang -- {0..*} Gebaeudeeingang;
+    END Untergang_Gebaeudeeingang;
+
+    ASSOCIATION Vorgaenger_Nachfolger_Gebaeudeeingang =
+        Vorgaenger -- {0..1} Gebaeudeeingang;
+        Nachfolger -- {0..*} Gebaeudeeingang;
+    END Vorgaenger_Nachfolger_Gebaeudeeingang;
+    
+    VIEW Gebaeudeeingang_Gueltig
+     	PROJECTION OF Gebaeudeeingang;
+    	WHERE DEFINED(Gebaeudeeingang->Entstehung) AND Gebaeudeeingang->Entstehung->Status==#gueltig AND (NOT(DEFINED(Gebaeudeeingang->Untergang)) OR Gebaeudeeingang->Untergang->Status<>#gueltig);
+    	=
+    	ALL OF Gebaeudeeingang;
+    END Gebaeudeeingang_Gueltig;
+    
+    ASSOCIATION LokalisationGebaeudeeingang =
+      Lokalisation -<> {0..1} Lokalisation;
+      Gebaeudeeingang -- {0..*} Gebaeudeeingang;
+    MANDATORY CONSTRAINT
+      DEFINED(Gebaeudeeingang->Hausnummer);
+    END LokalisationGebaeudeeingang;
+
+  END Gebaeudeadressen;
+ 
+
+END DM_Flex_AV_CH_Gebaeudeadressen_V1_0.

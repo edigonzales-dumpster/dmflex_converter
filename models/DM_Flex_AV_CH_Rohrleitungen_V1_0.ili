@@ -1,0 +1,177 @@
+INTERLIS 2.4;
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!
+!! DM.flex Datenmodell der amtlichen Vermessung "Bund" (DM.flex-AV-CH)
+!! beschrieben in INTERLIS Version 2.4
+!!
+!! Bundesamt fuer Landestopographie (swisstopo)
+!! Fachstelle Eidgenoessische Vermessungsdirektion (V+D)
+!! CH-3084 Wabern
+!! www.cadastre.ch und www.interlis.ch
+!!
+!! Version: 1 deutsch
+!! Dateiname: DM.flex-AV-CH.ili
+!!
+!! Das vorliegende Datenmodell gilt fuer den Bezugsrahmen "Landesvermessung 1903+
+!! (LV95)".
+!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!@ technicalContact = mailto:vermessung@swisstopo.ch
+!!@ furtherInformation = https://www.cadastre.ch/de/manual-av/method/dm-flex.html
+!!@ IDGeoIV = "64.1"
+MODEL DM_Flex_AV_CH_Rohrleitungen_V1_0 (de)
+  AT "https://models.geo.admin.ch/V_D/" VERSION "2021-09-06" =
+  IMPORTS GeometryCHLV95_V2;
+  IMPORTS DM_Flex_AV_CH_Geometrie_V1_0;
+  IMPORTS DM_Flex_AV_CH_Modinfo_V1_0;
+  IMPORTS DM_Flex_AV_CH_Qualitaet_V1_0;
+  IMPORTS DM_Flex_AV_CH_Grafik_V1_0;
+
+  TOPIC Rohrleitungen = 
+    BASKET OID AS INTERLIS.UUIDOID;
+    OID AS INTERLIS.UUIDOID;
+          !! gemaess Bundesgesetz ueber Rohrleitungsanlagen zur Befoerderung
+          !! fluessiger oder gasfoermiger Brenn- oder Treibstoffe
+
+    DOMAIN
+
+      Medium = (
+        Oel,
+        Gas,
+        weitere); !! Keine Objekte in der Kategorie weitere, nur fuer Erweiterungen
+
+    CLASS RLNachfuehrung =
+      NBIdent: MANDATORY TEXT*12;
+      Identifikator: MANDATORY TEXT*12;  !! z.B. Nummer des technischen Dossiers
+      Beschreibung: MANDATORY TEXT*30;
+      Perimeter:  SURFACE WITH (STRAIGHTS, ARCS) VERTEX GeometryCHLV95_V2.Coord2
+        WITHOUT OVERLAPS > 0.002;
+      Status: MANDATORY DM_Flex_AV_CH_Modinfo_V1_0.Status;
+      GueltigerEintrag: INTERLIS.XMLDateTime;
+    UNIQUE NBIdent, Identifikator;
+    END RLNachfuehrung;
+
+    STRUCTURE Flaechenelement =
+      Geometrie: MANDATORY SURFACE WITH (STRAIGHTS, ARCS) VERTEX GeometryCHLV95_V2.Coord2
+        WITHOUT OVERLAPS > 0.002;
+      Sichtbar: GeometryCHLV95_V2.MultiLine;        
+    END Flaechenelement;
+
+    STRUCTURE Linienelement =
+      Geometrie: MANDATORY GeometryCHLV95_V2.Line;
+      Sichtbar: (ja, nein);
+      !! Linienart-Werte sollen grundsaetzlich als undefiniert
+      !! ausgegeben werden, ausgenommen Wert sichtbar.
+    END Linienelement;
+
+    STRUCTURE Punktelement =
+      Geometrie: MANDATORY GeometryCHLV95_V2.Coord2;
+      HoeheGeom:  DM_Flex_AV_CH_Geometrie_V1_0.Hoehe;
+      SymbolOri: MANDATORY DM_Flex_AV_CH_Grafik_V1_0.Rotation;
+    END Punktelement;
+
+    CLASS Leitungsobjekt =
+      Betreiber: MANDATORY TEXT*30;
+      Qualitaet: MANDATORY DM_Flex_AV_CH_Qualitaet_V1_0.Qualitaetsstandard;
+      Medium: MANDATORY Medium;
+      Flaechenelement: BAG {0..*} OF Flaechenelement;
+      Linienelement: BAG {0..*} OF Linienelement;
+      Punktelement: BAG {0..*} OF Punktelement;
+    END Leitungsobjekt;
+
+    ASSOCIATION Entstehung_Leitungsobjekt =
+        Entstehung -- {1} RLNachfuehrung;
+        entstehendes_Leitungsobjekt -- {0..*} Leitungsobjekt;
+    END Entstehung_Leitungsobjekt;
+
+    ASSOCIATION Untergang_Leitungsobjekt =
+        Untergang -- {0..1} RLNachfuehrung;
+        untergehendes_Leitungsobjekt -- {0..*} Leitungsobjekt;
+    END Untergang_Leitungsobjekt;
+
+    ASSOCIATION Vorgaenger_Nachfolger_Leitungsobjekt =
+        Vorgaenger -- {0..1} Leitungsobjekt;
+        Nachfolger -- {0..*} Leitungsobjekt;
+    END Vorgaenger_Nachfolger_Leitungsobjekt;
+    
+    VIEW Leitungsobjekt_Gueltig
+     	PROJECTION OF Leitungsobjekt;
+    	WHERE DEFINED(Leitungsobjekt->Entstehung) AND Leitungsobjekt->Entstehung->Status==#gueltig AND (NOT(DEFINED(Leitungsobjekt->Untergang)) OR Leitungsobjekt->Untergang->Status<>#gueltig);
+    	=
+    	ALL OF Leitungsobjekt;
+    END Leitungsobjekt_Gueltig;
+
+    CLASS Signal =
+      Nummer: MANDATORY TEXT*12;
+      Betreiber: MANDATORY TEXT*30;
+      Geometrie: MANDATORY GeometryCHLV95_V2.Coord2;
+      Qualitaet: MANDATORY DM_Flex_AV_CH_Qualitaet_V1_0.Qualitaetsstandard;
+      Medium: MANDATORY Medium;
+      Signalart: MANDATORY (
+        Signal,
+        Tafel_Stein,
+        weitere); !! Keine Objekte in der Kategorie weitere, nur fuer Erweiterungen
+      SymbolOri: DM_Flex_AV_CH_Grafik_V1_0.Rotation;
+    END Signal;
+
+    ASSOCIATION Entstehung_Signal =
+        Entstehung -- {1} RLNachfuehrung;
+        entstehendes_Signal -- {0..*} Signal;
+    END Entstehung_Signal;
+
+    ASSOCIATION Untergang_Signal =
+        Untergang -- {0..1} RLNachfuehrung;
+        untergehendes_Signal -- {0..*} Signal;
+    END Untergang_Signal;
+
+    ASSOCIATION Vorgaenger_Nachfolger_Signal =
+        Vorgaenger -- {0..1} Signal;
+        Nachfolger -- {0..*} Signal;
+    END Vorgaenger_Nachfolger_Signal;
+    
+    VIEW Signal_Gueltig
+     	PROJECTION OF Signal;
+    	WHERE DEFINED(Signal->Entstehung) AND Signal->Entstehung->Status==#gueltig AND (NOT(DEFINED(Signal->Untergang)) OR Signal->Untergang->Status<>#gueltig);
+    	=
+    	ALL OF Signal;
+    END Signal_Gueltig;
+
+    CLASS Messpunkt =
+      Identifikator:  TEXT*12;
+      Geometrie: MANDATORY GeometryCHLV95_V2.Coord2;
+        !! // nicht zugleich LFP1, LFP2, LFP3, Grenzpunkt oder Hoheitsgrenzpunkt //
+      LageGen: MANDATORY DM_Flex_AV_CH_Qualitaet_V1_0.Genauigkeit;
+      LageZuv: MANDATORY DM_Flex_AV_CH_Qualitaet_V1_0.Zuverlaessigkeit; 
+      ExaktDefiniert: MANDATORY (    !! Toleranzvorschriften gemaess TVAV beachten
+        ja,
+        nein);
+    END Messpunkt;
+    
+    ASSOCIATION Entstehung_Messpunkt =
+        Entstehung -- {1} RLNachfuehrung;
+        entstehender_Messpunkt -- {0..*} Messpunkt;
+    END Entstehung_Messpunkt;
+
+    ASSOCIATION Untergang_Messpunkt =
+        Untergang -- {0..1} RLNachfuehrung;
+        untergehender_Messpunkt -- {0..*} Messpunkt;
+    END Untergang_Messpunkt;
+
+    VIEW Messpunkt_Gueltig
+     	PROJECTION OF Messpunkt;
+    	WHERE DEFINED(Messpunkt->Entstehung) AND Messpunkt->Entstehung->Status==#gueltig AND (NOT(DEFINED(Messpunkt->Untergang)) OR Messpunkt->Untergang->Status<>#gueltig);
+    	=
+    	ALL OF Messpunkt;
+    UNIQUE Geometrie;
+    END Messpunkt_Gueltig;
+    
+    ASSOCIATION Vorgaenger_Nachfolger_Messpunkt =
+        Vorgaenger -- {0..1} Messpunkt;
+        Nachfolger -- {0..*} Messpunkt;
+    END Vorgaenger_Nachfolger_Messpunkt;
+    
+  END Rohrleitungen;
+ 
+END DM_Flex_AV_CH_Rohrleitungen_V1_0.

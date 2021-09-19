@@ -1,0 +1,203 @@
+INTERLIS 2.4;
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!
+!! DM.flex Datenmodell der amtlichen Vermessung "Bund" (DM.flex-AV-CH)
+!! beschrieben in INTERLIS Version 2.4
+!!
+!! Bundesamt fuer Landestopographie (swisstopo)
+!! Fachstelle Eidgenoessische Vermessungsdirektion (V+D)
+!! CH-3084 Wabern
+!! www.cadastre.ch und www.interlis.ch
+!!
+!! Version: 1 deutsch
+!! Dateiname: DM.flex-AV-CH.ili
+!!
+!! Das vorliegende Datenmodell gilt fuer den Bezugsrahmen "Landesvermessung 1903+
+!! (LV95)".
+!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!@ technicalContact = mailto:vermessung@swisstopo.ch
+!!@ furtherInformation = https://www.cadastre.ch/de/manual-av/method/dm-flex.html
+!!@ IDGeoIV = "56.1"
+MODEL DM_Flex_AV_CH_Einzelobjekte_V1_0 (de)
+  AT "https://models.geo.admin.ch/V_D/" VERSION "2021-09-06" =
+  IMPORTS GeometryCHLV95_V2;
+  IMPORTS DM_Flex_AV_CH_Modinfo_V1_0;
+  IMPORTS DM_Flex_AV_CH_Qualitaet_V1_0;
+  IMPORTS DM_Flex_AV_CH_Grafik_V1_0;
+
+  TOPIC Einzelobjekte =
+    BASKET OID AS INTERLIS.UUIDOID;
+    OID AS INTERLIS.UUIDOID;
+
+    DOMAIN
+
+      EOArt = (
+        Mauer,
+        unterirdisches_Gebaeude,
+        uebriger_Gebaeudeteil,
+        eingedoltes_oeffentliches_Gewaesser,
+        wichtige_Treppe,
+        Tunnel_Unterfuehrung_Galerie,
+        Bruecke_Passerelle,
+        Bahnsteig,
+        Brunnen,
+        Reservoir,
+        Pfeiler,
+        Unterstand,
+        Silo_Turm_Gasometer,
+        Hochkamin,
+        Denkmal,
+        Mast_Antenne,
+        Aussichtsturm,
+        Uferverbauung,
+        Schwelle,
+        Lawinenverbauung,
+        massiver_Sockel,
+        Ruine_archaeologisches_Objekt,
+        Landungssteg,
+        einzelner_Fels,
+        schmale_bestockte_Flaeche,
+        Rinnsal,
+        schmaler_Weg,
+        Hochspannungsfreileitung,
+        Druckleitung,
+        Bahngeleise,
+        Luftseilbahn,
+        Gondelbahn_Sesselbahn,
+        Materialseilbahn,
+        Skilift,
+        Faehre,
+        Grotte_Hoehleneingang,
+        Achse,
+        wichtiger_Einzelbaum,
+        Bildstock_Kruzifix,
+        Quelle,
+        Bezugspunkt,
+        weitere); !! Keine Objekte in der Kategorie weitere, nur fuer Erweiterungen
+
+    CLASS EONachfuehrung =
+      NBIdent: MANDATORY TEXT*12;
+      Identifikator: MANDATORY TEXT*12;  !! z.B. Nummer des technischen Dossiers
+      Beschreibung: MANDATORY TEXT*30;
+      Perimeter:  SURFACE WITH (STRAIGHTS, ARCS) VERTEX GeometryCHLV95_V2.Coord2
+        WITHOUT OVERLAPS > 0.002;
+      Status: MANDATORY DM_Flex_AV_CH_Modinfo_V1_0.Status;
+      GueltigerEintrag: INTERLIS.XMLDateTime;
+    UNIQUE NBIdent, Identifikator;
+    END EONachfuehrung;
+
+    STRUCTURE FlaechenelementSymbol =  !! z.B. Fliessrichtung bei Rinnsal
+      Position: MANDATORY GeometryCHLV95_V2.Coord2;
+      SymbolOri:  DM_Flex_AV_CH_Grafik_V1_0.Rotation; !! // undefiniert = 0.0 //
+    END FlaechenelementSymbol;
+
+    STRUCTURE Flaechenelement =
+      Geometrie: MANDATORY SURFACE WITH (STRAIGHTS, ARCS) VERTEX GeometryCHLV95_V2.Coord2
+        WITHOUT OVERLAPS > 0.002;
+      FlaechenelementSymbol: BAG {0..*} OF FlaechenelementSymbol;
+    END Flaechenelement;
+
+    STRUCTURE LinienelementSymbol =  !! z.B. Faehre
+      Position: MANDATORY GeometryCHLV95_V2.Coord2;
+      SymbolOri: MANDATORY DM_Flex_AV_CH_Grafik_V1_0.Rotation;
+    END LinienelementSymbol;
+
+    STRUCTURE Linienelement =
+      Geometrie: MANDATORY GeometryCHLV95_V2.Line;
+      LinienelementSymbol: BAG {0..*} OF LinienelementSymbol;
+    END Linienelement;
+
+    STRUCTURE Punktelement =
+      Geometrie: MANDATORY GeometryCHLV95_V2.Coord2;
+      SymbolOri: DM_Flex_AV_CH_Grafik_V1_0.Rotation;
+    END Punktelement;
+
+    STRUCTURE Objektname =
+      Position: MANDATORY GeometryCHLV95_V2.Coord2;
+      Name: MANDATORY TEXT*30;
+      ObjektnameOri: DM_Flex_AV_CH_Grafik_V1_0.Rotation;
+    END Objektname;
+
+    STRUCTURE Objektnummer =
+      Nummer: TEXT*12;
+      !! GWR_EGID falls die Definition der Gebaeude mit jener des
+      !! BFS uebereinstimmt
+      GWR_EGID:  1 .. 900000000;
+    END Objektnummer;
+
+    CLASS Einzelobjekt =
+      Qualitaet: MANDATORY DM_Flex_AV_CH_Qualitaet_V1_0.Qualitaetsstandard;
+      Einzelobjektart: MANDATORY EOArt;
+      Flaechenelement: BAG {0..*} OF Flaechenelement;
+      Linienelement: BAG {0..*} OF Linienelement;
+      Punktelement: BAG {0..*} OF Punktelement;
+      Objektname: BAG {0..*} OF Objektname;
+      Objektnummer: BAG {0..*} OF Objektnummer;
+      Gebaeudestatus: (projektiert, real, vergangen); !! // MANDATORY falls Objekt im GWR //
+      MANDATORY CONSTRAINT INTERLIS.elementCount(Flaechenelement)>0 
+        OR INTERLIS.elementCount(Linienelement)>0 
+        OR INTERLIS.elementCount(Punktelement)>0;
+    END Einzelobjekt;
+
+    ASSOCIATION Entstehung_Einzelobjekt =
+        Entstehung -- {1} EONachfuehrung;
+        entstehendes_Einzelobjekt -- {0..*} Einzelobjekt;
+    END Entstehung_Einzelobjekt;
+
+    ASSOCIATION Untergang_Einzelobjekt =
+        Untergang -- {0..1} EONachfuehrung;
+        untergehendes_Einzelobjekt -- {0..*} Einzelobjekt;
+    END Untergang_Einzelobjekt;
+    
+    ASSOCIATION Vorgaenger_Nachfolger_Einzelobjekt =
+        Vorgaenger -- {0..1} Einzelobjekt;
+        Nachfolger -- {0..*} Einzelobjekt;
+    END Vorgaenger_Nachfolger_Einzelobjekt;
+
+    VIEW Einzelobjekt_Gueltig
+     	PROJECTION OF Einzelobjekt;
+    	WHERE DEFINED(Einzelobjekt->Entstehung) AND Einzelobjekt->Entstehung->Status==#gueltig AND (NOT(DEFINED(Einzelobjekt->Untergang)) OR Einzelobjekt->Untergang->Status<>#gueltig);
+    	=
+    	ALL OF Einzelobjekt;
+    END Einzelobjekt_Gueltig;
+
+    CLASS Messpunkt =
+      Identifikator:  TEXT*12;
+      Geometrie: MANDATORY GeometryCHLV95_V2.Coord2;
+        !! // nicht zugleich LFP1, LFP2, LFP3, Grenzpunkt oder Hoheitsgrenzpunkt //
+      LageGen: MANDATORY DM_Flex_AV_CH_Qualitaet_V1_0.Genauigkeit;
+      LageZuv: MANDATORY DM_Flex_AV_CH_Qualitaet_V1_0.Zuverlaessigkeit;
+      ExaktDefiniert: MANDATORY (    !! Toleranzvorschriften gemaess TVAV beachten
+        ja,
+        nein);
+    END Messpunkt;
+    
+    ASSOCIATION Entstehung_Messpunkt =
+        Entstehung -- {1} EONachfuehrung;
+        entstehender_Messpunkt -- {0..*} Messpunkt;
+    END Entstehung_Messpunkt;
+
+    ASSOCIATION Untergang_Messpunkt =
+        Untergang -- {0..1} EONachfuehrung;
+        untergehender_Messpunkt -- {0..*} Messpunkt;
+    END Untergang_Messpunkt;
+
+    ASSOCIATION Vorgaenger_Nachfolger_Messpunkt =
+        Vorgaenger -- {0..1} Messpunkt;
+        Nachfolger -- {0..*} Messpunkt;
+    END Vorgaenger_Nachfolger_Messpunkt;
+    
+    VIEW Messpunkt_Gueltig
+     	PROJECTION OF Messpunkt;
+    	WHERE DEFINED(Messpunkt->Entstehung) AND Messpunkt->Entstehung->Status==#gueltig AND (NOT(DEFINED(Messpunkt->Untergang)) OR Messpunkt->Untergang->Status<>#gueltig);
+    	=
+    	ALL OF Messpunkt;
+    UNIQUE Geometrie;
+    END Messpunkt_Gueltig;
+
+  END Einzelobjekte;
+ 
+END DM_Flex_AV_CH_Einzelobjekte_V1_0.

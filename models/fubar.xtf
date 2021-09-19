@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:geom="http://www.interlis.ch/geometry/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:DM_Flex_AV_CH_Vermarkung_V1_0="http://www.interlis.ch/xtf/2.4/DM_Flex_AV_CH_Vermarkung_V1_0" xmlns:Units="http://www.interlis.ch/xtf/2.4/Units" xmlns:DM_Flex_AV_CH_Topologie_V1_0="http://www.interlis.ch/xtf/2.4/DM_Flex_AV_CH_Topologie_V1_0" xmlns:CoordSys="http://www.interlis.ch/xtf/2.4/CoordSys" xmlns:DM_Flex_AV_CH_Modinfo_V1_0="http://www.interlis.ch/xtf/2.4/DM_Flex_AV_CH_Modinfo_V1_0" xmlns:DM_Flex_AV_CH_Grafik_V1_0="http://www.interlis.ch/xtf/2.4/DM_Flex_AV_CH_Grafik_V1_0" xmlns:DM_Flex_AV_CH_Qualitaet_V1_0="http://www.interlis.ch/xtf/2.4/DM_Flex_AV_CH_Qualitaet_V1_0" xmlns:Geometry_V2="http://www.interlis.ch/xtf/2.4/Geometry_V2" xmlns:GeometryCHLV03_V2="http://www.interlis.ch/xtf/2.4/GeometryCHLV03_V2" xmlns:GeometryCHLV95_V2="http://www.interlis.ch/xtf/2.4/GeometryCHLV95_V2" xmlns:DM_Flex_AV_CH_Grundstuecke_V1_0="http://www.interlis.ch/xtf/2.4/DM_Flex_AV_CH_Grundstuecke_V1_0">
+  <ili:headersection>
+    <ili:models>
+      <ili:model>DM_Flex_AV_CH_Vermarkung_V1_0</ili:model>
+      <ili:model>Units</ili:model>
+      <ili:model>DM_Flex_AV_CH_Topologie_V1_0</ili:model>
+      <ili:model>CoordSys</ili:model>
+      <ili:model>DM_Flex_AV_CH_Modinfo_V1_0</ili:model>
+      <ili:model>DM_Flex_AV_CH_Grafik_V1_0</ili:model>
+      <ili:model>DM_Flex_AV_CH_Qualitaet_V1_0</ili:model>
+      <ili:model>Geometry_V2</ili:model>
+      <ili:model>GeometryCHLV03_V2</ili:model>
+      <ili:model>GeometryCHLV95_V2</ili:model>
+      <ili:model>DM_Flex_AV_CH_Grundstuecke_V1_0</ili:model>
+    </ili:models>
+    <ili:sender>ili2pg-4.6.0-97c759c6e1adf63b03653871932368050d4ca803</ili:sender>
+  </ili:headersection>
+  <ili:datasection>
+</ili:datasection>
+</ili:transfer>

@@ -1,0 +1,103 @@
+INTERLIS 2.4;
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!
+!! DM.flex Datenmodell der amtlichen Vermessung "Bund" (DM.flex-AV-CH)
+!! beschrieben in INTERLIS Version 2.4
+!!
+!! Bundesamt fuer Landestopographie (swisstopo)
+!! Fachstelle Eidgenoessische Vermessungsdirektion (V+D)
+!! CH-3084 Wabern
+!! www.cadastre.ch und www.interlis.ch
+!!
+!! Version: 1 deutsch
+!! Dateiname: DM.flex-AV-CH.ili
+!!
+!! Das vorliegende Datenmodell gilt fuer den Bezugsrahmen "Landesvermessung 1903+
+!! (LV95)".
+!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!@ technicalContact = mailto:vermessung@swisstopo.ch
+!!@ furtherInformation = https://www.cadastre.ch/de/manual-av/method/dm-flex.html
+!!@ IDGeoIV = "58.1"
+MODEL DM_Flex_AV_CH_Nomenklatur_V1_0 (de)
+  AT "https://models.geo.admin.ch/V_D/" VERSION "2021-09-06" =
+  IMPORTS GeometryCHLV95_V2;
+
+  TOPIC Nomenklatur =
+    BASKET OID AS INTERLIS.UUIDOID;
+    OID AS INTERLIS.UUIDOID;
+
+    CLASS NKNachfuehrung =
+      NBIdent: MANDATORY TEXT*12;
+      Identifikator: MANDATORY TEXT*12;  !! z.B. Nummer des technischen Dossiers
+      Beschreibung: MANDATORY TEXT*30;
+      Perimeter:  SURFACE WITH (STRAIGHTS, ARCS) VERTEX GeometryCHLV95_V2.Coord2
+        WITHOUT OVERLAPS > 0.002;
+      GueltigerEintrag: MANDATORY INTERLIS.XMLDateTime;
+    UNIQUE NBIdent, Identifikator;
+    END NKNachfuehrung;
+
+    CLASS Flurname =
+      UntergegangenAm:  INTERLIS.XMLDateTime;
+      Name: MANDATORY TEXT*40;
+      Geometrie: MANDATORY SURFACE WITH (STRAIGHTS, ARCS) VERTEX GeometryCHLV95_V2.Coord2
+        WITHOUT OVERLAPS > 0.002;
+      Fiktiv : MANDATORY BOOLEAN;
+    END Flurname;
+
+    VIEW Flurname_Gueltig
+     	PROJECTION OF Flurname;
+    	WHERE NOT( DEFINED(Flurname->UntergegangenAm));
+    	=
+    	ALL OF Flurname;
+    	SET CONSTRAINT INTERLIS.areAreas(ALL, UNDEFINED, >> Geometrie);
+    END Flurname_Gueltig;
+    
+    ASSOCIATION Entstehung_Flurname =
+        Entstehung -- {1} NKNachfuehrung;
+        entstehender_Flurname -- {0..*} Flurname;
+    END Entstehung_Flurname;
+
+    CLASS Ortsname =
+      UntergegangenAm:  INTERLIS.XMLDateTime;
+      Name: MANDATORY TEXT*40;
+      Geometrie: MANDATORY SURFACE WITH (STRAIGHTS, ARCS) VERTEX GeometryCHLV95_V2.Coord2
+        WITHOUT OVERLAPS > 0.002;
+      Typ:  TEXT*30;  !! Vergabe durch Kanton
+    END Ortsname;
+    
+    VIEW Ortsname_Gueltig
+     	PROJECTION OF Ortsname;
+    	WHERE NOT( DEFINED(Ortsname->UntergegangenAm));
+    	=
+    	ALL OF Ortsname;
+    END Ortsname_Gueltig;
+
+    ASSOCIATION Entstehung_Ortsname =
+        Entstehung -- {1} NKNachfuehrung;
+        entstehender_Ortsname -- {0..*} Ortsname;
+    END Entstehung_Ortsname;
+
+    CLASS Gelaendename =
+      UntergegangenAm:  INTERLIS.XMLDateTime;
+      Name: MANDATORY TEXT*40;
+      Geometrie: MANDATORY GeometryCHLV95_V2.Coord2;
+    END Gelaendename;
+
+    VIEW Gelaendename_Gueltig
+     	PROJECTION OF Gelaendename;
+    	WHERE NOT( DEFINED(Gelaendename->UntergegangenAm));
+    	=
+    	ALL OF Gelaendename;
+    END Gelaendename_Gueltig;
+    
+    ASSOCIATION Entstehung_Gelaendename =
+        Entstehung -- {1} NKNachfuehrung;
+        entstehender_Gelaendename -- {0..*} Gelaendename;
+    END Entstehung_Gelaendename;
+
+  END Nomenklatur;
+ 
+END DM_Flex_AV_CH_Nomenklatur_V1_0.

@@ -1,0 +1,176 @@
+INTERLIS 2.4;
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!
+!! DM.flex Datenmodell der amtlichen Vermessung "Bund" (DM.flex-AV-CH)
+!! beschrieben in INTERLIS Version 2.4
+!!
+!! Bundesamt fuer Landestopographie (swisstopo)
+!! Fachstelle Eidgenoessische Vermessungsdirektion (V+D)
+!! CH-3084 Wabern
+!! www.cadastre.ch und www.interlis.ch
+!!
+!! Version: 1 deutsch
+!! Dateiname: DM.flex-AV-CH.ili
+!!
+!! Das vorliegende Datenmodell gilt fuer den Bezugsrahmen "Landesvermessung 1903+
+!! (LV95)".
+!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!@ technicalContact = mailto:vermessung@swisstopo.ch
+!!@ furtherInformation = https://www.cadastre.ch/de/manual-av/method/dm-flex.html
+!!@ IDGeoIV = "55.1"
+MODEL DM_Flex_AV_CH_Bodenbedeckung_V1_0 (de)
+  AT "https://models.geo.admin.ch/V_D/" VERSION "2021-09-06" =
+  IMPORTS GeometryCHLV95_V2;
+  IMPORTS DM_Flex_AV_CH_Modinfo_V1_0;
+  IMPORTS DM_Flex_AV_CH_Qualitaet_V1_0;
+  IMPORTS DM_Flex_AV_CH_Grafik_V1_0;
+
+  TOPIC Bodenbedeckung =
+    BASKET OID AS INTERLIS.UUIDOID;
+    OID AS INTERLIS.UUIDOID;
+
+    DOMAIN
+
+      BBArt = (
+        Gebaeude,
+        befestigt (
+          Strasse_Weg,
+          Trottoir,
+          Verkehrsinsel,
+          Bahn,
+          Flugplatz,
+          Wasserbecken,
+          uebrige_befestigte),
+        humusiert (
+          Acker_Wiese_Weide,
+          Intensivkultur (
+            Reben,
+            uebrige_Intensivkultur),
+          Gartenanlage,
+          Hoch_Flachmoor,
+          uebrige_humusierte),
+        Gewaesser (
+          stehendes,
+          fliessendes,
+          Schilfguertel),
+        bestockt (
+          geschlossener_Wald,
+          Wytweide (  !! Wytweide = bestockte Weide, Erklaerungen Kap. 3.4
+            Wytweide_dicht,
+            Wytweide_offen),
+          uebrige_bestockte),
+        vegetationslos (
+          Fels,
+          Gletscher_Firn,
+          Geroell_Sand,
+          Abbau_Deponie,
+          uebrige_vegetationslose));
+
+
+    CLASS BBNachfuehrung =
+      NBIdent: MANDATORY TEXT*12;
+      Identifikator: MANDATORY TEXT*12;  !! z.B. Nummer des technischen Dossiers
+      Beschreibung: MANDATORY TEXT*30;
+      Perimeter:  SURFACE WITH (STRAIGHTS, ARCS) VERTEX GeometryCHLV95_V2.Coord2
+        WITHOUT OVERLAPS > 0.002;
+      Status: MANDATORY DM_Flex_AV_CH_Modinfo_V1_0.Status;
+      GueltigerEintrag: INTERLIS.XMLDateTime;
+    UNIQUE NBIdent, Identifikator;
+    END BBNachfuehrung;
+
+    STRUCTURE Gebaeudenummer =
+      Nummer: TEXT*12;
+      !! GWR_EGID falls die Definition der Gebaeude mit jener des
+      !! BFS uebereinstimmt
+      GWR_EGID: 1 .. 900000000;
+    END Gebaeudenummer;
+
+    STRUCTURE Objektname =
+      Position: MANDATORY GeometryCHLV95_V2.Coord2;
+      Name: MANDATORY TEXT*30;
+      ObjektnameOri: DM_Flex_AV_CH_Grafik_V1_0.Rotation;
+    END Objektname;
+
+    STRUCTURE Fliessrichtung =
+      Position: MANDATORY GeometryCHLV95_V2.Coord2;
+      SymbolOri: DM_Flex_AV_CH_Grafik_V1_0.Rotation;
+    END Fliessrichtung;
+    
+    CLASS Bodenbedeckung =
+      Geometrie: MANDATORY SURFACE WITH (STRAIGHTS, ARCS) VERTEX GeometryCHLV95_V2.Coord2
+        WITHOUT OVERLAPS > 0.002;
+      Qualitaet: MANDATORY DM_Flex_AV_CH_Qualitaet_V1_0.Qualitaetsstandard;
+      Bodenbedeckungsart: MANDATORY BBArt;
+      Fiktiv : MANDATORY BOOLEAN;
+      Gebaeudestatus: (projektiert, real, vergangen);
+      Gebaeudenummer: BAG {0..*} OF Gebaeudenummer; 
+      Objektname: BAG {0..*} OF Objektname;
+      Fliessrichtung: BAG {0..*} OF Fliessrichtung;
+      MANDATORY CONSTRAINT Bodenbedeckungsart<>#Gebaeude OR DEFINED(Gebaeudestatus);
+      MANDATORY CONSTRAINT Bodenbedeckungsart==#Gebaeude OR INTERLIS.elementCount(Gebaeudenummer)==0;
+      MANDATORY CONSTRAINT Bodenbedeckungsart==#Gewaesser.fliessendes OR INTERLIS.elementCount(Fliessrichtung)==0;
+    END Bodenbedeckung;
+    
+    ASSOCIATION Entstehung_Bodenbedeckung =
+        Entstehung -- {1} BBNachfuehrung;
+        entstehende_BoFlaeche -- {0..*} Bodenbedeckung;
+    END Entstehung_Bodenbedeckung;
+
+    ASSOCIATION Untergang_Bodenbedeckung =
+        Untergang -- {0..1} BBNachfuehrung;
+        untergehende_BoFlaeche -- {0..*} Bodenbedeckung;
+    END Untergang_Bodenbedeckung;
+
+    ASSOCIATION Vorgaenger_Nachfolger_Bodenbedeckung =
+        Vorgaenger -- {0..1} Bodenbedeckung;
+        Nachfolger -- {0..*} Bodenbedeckung;
+    END Vorgaenger_Nachfolger_Bodenbedeckung;
+    
+    VIEW Bodenbedeckung_Gueltig
+     	PROJECTION OF Bodenbedeckung;
+    	WHERE DEFINED(Bodenbedeckung->Entstehung) AND Bodenbedeckung->Entstehung->Status==#gueltig AND (NOT(DEFINED(Bodenbedeckung->Untergang)) OR Bodenbedeckung->Untergang->Status<>#gueltig);
+    	=
+    	ALL OF Bodenbedeckung;
+    SET CONSTRAINT INTERLIS.areAreas(ALL, UNDEFINED, >> Geometrie);
+    END Bodenbedeckung_Gueltig;
+    
+    CLASS Messpunkt =
+      Identifikator:  TEXT*12;
+      Geometrie: MANDATORY GeometryCHLV95_V2.Coord2; 
+        !! // nicht zugleich LFP1, LFP2, LFP3, Grenzpunkt oder Hoheitsgrenzpunkt //
+      LageGen: MANDATORY DM_Flex_AV_CH_Qualitaet_V1_0.Genauigkeit;
+      LageZuv: MANDATORY DM_Flex_AV_CH_Qualitaet_V1_0.Zuverlaessigkeit;
+      ExaktDefiniert: MANDATORY (    !! Toleranzvorschriften gemaess TVAV beachten
+        ja,
+        nein);
+    END Messpunkt;
+
+    ASSOCIATION Entstehung_Messpunkt =
+        Entstehung -- {1} BBNachfuehrung;
+        entstehender_Messpunkt -- {0..*} Messpunkt;
+    END Entstehung_Messpunkt;
+
+    ASSOCIATION Untergang_Messpunkt =
+        Untergang -- {0..1} BBNachfuehrung;
+        untergehender_Messpunkt -- {0..*} Messpunkt;
+    END Untergang_Messpunkt;
+
+    ASSOCIATION Vorgaenger_Nachfolger_Messpunkt =
+        Vorgaenger -- {0..1} Messpunkt;
+        Nachfolger -- {0..*} Messpunkt;
+    END Vorgaenger_Nachfolger_Messpunkt;
+    
+    VIEW Messpunkt_Gueltig
+     	PROJECTION OF Messpunkt;
+    	WHERE DEFINED(Messpunkt->Entstehung) AND Messpunkt->Entstehung->Status==#gueltig AND (NOT(DEFINED(Messpunkt->Untergang)) OR Messpunkt->Untergang->Status<>#gueltig);
+    	=
+    	ALL OF Messpunkt;
+    UNIQUE Geometrie;
+    END Messpunkt_Gueltig;
+    
+  END Bodenbedeckung;
+ 
+END DM_Flex_AV_CH_Bodenbedeckung_V1_0.
